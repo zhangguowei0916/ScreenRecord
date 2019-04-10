@@ -1,52 +1,84 @@
 package com.zgw.record;
 
+import android.content.Intent;
 import android.os.Bundle;
-import android.support.design.widget.FloatingActionButton;
-import android.support.design.widget.Snackbar;
+import android.support.annotation.NonNull;
 import android.support.v7.app.AppCompatActivity;
-import android.support.v7.widget.Toolbar;
 import android.view.View;
-import android.view.Menu;
-import android.view.MenuItem;
+import android.widget.Button;
+import android.widget.Toast;
 
-public class MainActivity extends AppCompatActivity {
+import com.zgw.screenrecord.ScreenRecorderHelper;
+
+
+public class MainActivity extends AppCompatActivity implements View.OnClickListener {
+
+    private Button bt_start,bt_stop;
+    private ScreenRecorderHelper srHelper;
+
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
-        setSupportActionBar(toolbar);
+        initView();
+        srHelper = MyApplication.getApp().getSRHelper();
+        srHelper.initRecordService(this);
 
-        FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
-        fab.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
-                        .setAction("Action", null).show();
-            }
-        });
+    }
+
+    private void initView() {
+        bt_start = findViewById(R.id.bt_start);
+        bt_stop = findViewById(R.id.bt_stop);
+        bt_start.setOnClickListener(this);
+        bt_stop.setOnClickListener(this);
     }
 
     @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        // Inflate the menu; this adds items to the action bar if it is present.
-        getMenuInflater().inflate(R.menu.menu_main, menu);
-        return true;
-    }
+    public void onClick(View v) {
+        if (v.getId()==R.id.bt_start){
+        srHelper.startRecord(this);
+        }else if (v.getId()==R.id.bt_stop){
+           srHelper.stopRecord(new ScreenRecorderHelper.OnRecordStatusChangeListener() {
+               @Override
+               public void onChangeSuccess() {
+                   //当停止成功，做界面变化
+                   bt_start.setText("开始录制");
+                   Toast.makeText(MainActivity.this, "录屏成功"+srHelper.getRecordFilePath(), Toast.LENGTH_SHORT).show();
+               }
 
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        // Handle action bar item clicks here. The action bar will
-        // automatically handle clicks on the Home/Up button, so long
-        // as you specify a parent activity in AndroidManifest.xml.
-        int id = item.getItemId();
+               @Override
+               public void onChangeFailed() {
+                   //不作处理
 
-        //noinspection SimplifiableIfStatement
-        if (id == R.id.action_settings) {
-            return true;
+               }
+           });
         }
+    }
 
-        return super.onOptionsItemSelected(item);
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+          srHelper.onActivityResult(this, requestCode, resultCode, data, new ScreenRecorderHelper.OnRecordStatusChangeListener() {
+              @Override
+              public void onChangeSuccess() {
+                  //控制开始按钮的文字变化
+                  bt_start.setText("正在录制");
+              }
+
+              @Override
+              public void onChangeFailed() {
+                  //如果录制失败，则不作任何变化
+                  bt_start.setText("开始录制");
+              }
+          });
+    }
+
+
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        srHelper.onRequestPermissionsResult(this,requestCode,permissions,grantResults);
     }
 }
